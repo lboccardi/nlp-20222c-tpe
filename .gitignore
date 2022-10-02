@@ -130,3 +130,5 @@ dmypy.json
 
 # Datasets
 datasets/
+punkt/
+out/
