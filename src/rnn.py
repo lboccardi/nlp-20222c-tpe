@@ -1,5 +1,6 @@
 import pandas as pd 
-import tensorflow as tf 
+import tensorflow as tf
+import sys
 from tensorflow.keras.preprocessing.text import Tokenizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score
@@ -7,7 +8,7 @@ from sklearn.metrics import accuracy_score, precision_score
 PATH_TO_FILE = "datasets/news.csv"
 MAX_VOCAB = 10000
 
-def get_bi_gru_improved_model(embedding_layer_length):
+def get_bi_lstm_improved_model(embedding_layer_length):
     return tf.keras.Sequential([
         tf.keras.layers.Embedding(embedding_layer_length, 256),
         tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True), name="Bidirectional_LSTM_1"),
@@ -36,6 +37,12 @@ def get_bi_lstm_model(embedding_layer_length):
         tf.keras.layers.Dense(1, name="Output"),
     ])
 
+MODEL_MAP = {
+    1: get_bi_lstm_model,
+    2: get_bi_gru_model,
+    3: get_bi_lstm_improved_model,
+}
+
 def get_training_and_testing_sequences(train, test, tokenizer):
     X_train = tokenizer.texts_to_sequences(train)
     X_test = tokenizer.texts_to_sequences(test)
@@ -46,6 +53,11 @@ def get_training_and_testing_sequences(train, test, tokenizer):
     return X_train, X_test
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        model_number = 1
+    else:
+        model_number = int(sys.argv[1])
+
     df: pd.DataFrame = pd.read_csv(PATH_TO_FILE)
 
     X_train, X_test, y_train, y_test = train_test_split(df['title'], df['truth'], test_size=0.2, random_state=5122022)
@@ -53,7 +65,8 @@ if __name__ == "__main__":
     tokenizer.fit_on_texts(X_train)
     X_train, X_test = get_training_and_testing_sequences(X_train, X_test, tokenizer)
 
-    model = get_bi_gru_improved_model(MAX_VOCAB)
+    model = MODEL_MAP[model_number](MAX_VOCAB)
+    model.summary()
 
     early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, restore_best_weights=True)
     model.compile(
